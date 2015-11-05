@@ -267,7 +267,8 @@ static int process_config(VolumeManager* vm, VoldConfigs* configs) {
             }
 
             vm->addDiskSource(std::shared_ptr<VolumeManager::DiskSource>(
-                new VolumeManager::DiskSource(sysPattern, nickname, entry.partnum, flags)));
+                new VolumeManager::DiskSource(sysPattern, nickname, entry.partnum,
+                                flags, entry.fs_type, entry.fs_options)));
         }
     }
     return 0;
