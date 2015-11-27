@@ -166,9 +166,10 @@ status_t PublicVolume::doMount() {
         ret = exfat::Mount(mDevPath, mRawPath, AID_ROOT,
                            (isVisible ? AID_MEDIA_RW : AID_EXTERNAL_STORAGE), 0007);
     } else if (mFsType == "ext4") {
-        ret = ext4::Mount(mDevPath, mRawPath, false, false, true, mMntOpts, true);
+        ret = ext4::Mount(mDevPath, mRawPath, false, false, true, mMntOpts,
+                false, true);
     } else if (mFsType == "f2fs") {
-        ret = f2fs::Mount(mDevPath, mRawPath, mMntOpts, true);
+        ret = f2fs::Mount(mDevPath, mRawPath, mMntOpts, false, true);
     } else if (mFsType == "iso9660" || mFsType == "udf") {
         ret = iso9660::Mount(mDevPath, mRawPath,
                 AID_MEDIA_RW, AID_MEDIA_RW, mFsType.c_str());
