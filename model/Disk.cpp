@@ -402,6 +402,7 @@ status_t Disk::readPartitions() {
                     case 0x0b:  // W95 FAT32 (LBA)
                     case 0x0c:  // W95 FAT32 (LBA)
                     case 0x0e:  // W95 FAT16 (LBA)
+                    case 0x83:  // Linux Native
                         createPublicVolume(partDevice);
                         break;
                 }
