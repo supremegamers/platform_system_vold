@@ -1020,8 +1020,7 @@ bool IsFilesystemSupported(const std::string& fsType) {
 }
 
 bool IsSdcardfsUsed() {
-    return IsFilesystemSupported("sdcardfs") &&
-           base::GetBoolProperty(kExternalStorageSdcardfs, true);
+    return base::GetBoolProperty(kExternalStorageSdcardfs, true);
 }
 
 status_t WipeBlockDevice(const std::string& path) {
