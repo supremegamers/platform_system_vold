@@ -19,6 +19,8 @@
 #include <android-base/logging.h>
 #include <android-base/stringprintf.h>
 
+#include <cutils/properties.h>
+
 #include <logwrap/logwrap.h>
 
 #include "Ntfs.h"
@@ -35,10 +37,14 @@ static const char* kFsckPath = "/system/bin/fsck.ntfs";
 static const char* kMountPath = "/system/bin/mount.ntfs";
 
 bool IsSupported() {
-    return access(kMkfsPath, X_OK) == 0
-            && access(kFsckPath, X_OK) == 0
-            && access(kMountPath, X_OK) == 0
-            && IsFilesystemSupported("ntfs");
+    if (property_get_bool("ro.vold.use_ntfs3", false)) {
+        return IsFilesystemSupported("ntfs3");
+    } else {
+        return access(kMkfsPath, X_OK) == 0
+                && access(kFsckPath, X_OK) == 0
+                && access(kMountPath, X_OK) == 0
+                && IsFilesystemSupported("ntfs");
+    }
 }
 
 status_t Check(const std::string& source) {
@@ -60,25 +66,40 @@ status_t Check(const std::string& source) {
 
 status_t Mount(const std::string& source, const std::string& target, int ownerUid, int ownerGid,
                int permMask) {
-    auto mountData = android::base::StringPrintf("utf8,uid=%d,gid=%d,fmask=%o,dmask=%o,"
-                                                 "shortname=mixed,nodev,nosuid,dirsync,noatime,"
-                                                 "noexec", ownerUid, ownerGid, permMask, permMask);
+    if (property_get_bool("ro.vold.use_ntfs3", false)) {
+        auto mountData = android::base::StringPrintf(
+            "iocharset=utf8,uid=%d,gid=%d,fmask=%o,dmask=%o,force",
+                ownerUid, ownerGid, permMask, permMask);
 
-    std::vector<std::string> cmd;
-    cmd.push_back(kMountPath);
-    cmd.push_back("-o");
-    cmd.push_back(mountData.c_str());
-    cmd.push_back(source.c_str());
-    cmd.push_back(target.c_str());
-
-    int rc = ForkExecvp(cmd);
-    if (rc == 0) {
-        LOG(INFO) << "Mount OK";
-        return 0;
+        int flags = MS_NODEV | MS_NOSUID | MS_DIRSYNC | MS_NOATIME | MS_NOEXEC | MS_RDONLY;
+        int rc = mount(source.c_str(), target.c_str(), "ntfs3", flags, mountData.c_str());
+        if (rc != 0) {
+            LOG(ERROR) << "ntfs Mount error";
+            errno = EIO;
+            return -1;
+        }
+        return rc;
     } else {
-        LOG(ERROR) << "Mount failed (code " << rc << ")";
-        errno = EIO;
-        return -1;
+        auto mountData = android::base::StringPrintf("utf8,uid=%d,gid=%d,fmask=%o,dmask=%o,"
+                                                    "shortname=mixed,nodev,nosuid,dirsync,noatime,"
+                                                    "noexec", ownerUid, ownerGid, permMask, permMask);
+
+        std::vector<std::string> cmd;
+        cmd.push_back(kMountPath);
+        cmd.push_back("-o");
+        cmd.push_back(mountData.c_str());
+        cmd.push_back(source.c_str());
+        cmd.push_back(target.c_str());
+
+        int rc = ForkExecvp(cmd);
+        if (rc == 0) {
+            LOG(INFO) << "Mount OK";
+            return 0;
+        } else {
+            LOG(ERROR) << "Mount failed (code " << rc << ")";
+            errno = EIO;
+            return -1;
+        }
     }
 }
 
